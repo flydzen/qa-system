@@ -1,0 +1,14 @@
+--find-links https://download.pytorch.org/whl/torch_stable.html
+
+fastapi~=0.115.0
+
+uvicorn~=0.31.1
+Markdown~=3.7
+pandas~=2.2.3
+torch==2.3.1+cpu
+pymilvus~=2.4.8
+pymilvus[model]~=2.4.8
+sentence-transformers~=3.2.0
+
+pydantic~=2.9.2
+tqdm~=4.66.5

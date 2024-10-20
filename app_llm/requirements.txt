@@ -7,3 +7,4 @@ torch==2.3.1+cpu
 sentence-transformers~=3.2.0
 pydantic~=2.9.2
 ujson~=5.10.0
+prometheus-fastapi-instrumentator~=7.0.0

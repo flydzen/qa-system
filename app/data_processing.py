@@ -14,7 +14,7 @@ EMBEDDINGS_URL = f'http://{LLM_HOST}:{LLM_PORT}/encode'
 LLM_URL = f'http://{LLM_HOST}:{LLM_PORT}/llm_ask'
 
 
-def load_articles(queries: list[Question], embeddings: list[list], context: Context) -> list[DBSearchResponse]:
+async def get_articles(queries: list[Question], embeddings: list[list], context: Context) -> list[DBSearchResponse]:
     topic_to_questions: dict[Topic, list] = defaultdict(list)
     for index, (query, emb) in enumerate(zip(queries, embeddings)):
         topic_to_questions[query.topic].append((index, emb))
@@ -22,10 +22,8 @@ def load_articles(queries: list[Question], embeddings: list[list], context: Cont
     result: list = [None] * len(queries)
     for topic, items in topic_to_questions.items():
         indexes, embeds = list(zip(*items))
-        db_response = context.db.search(
-            topic=topic.value,
-            embeddings=list(embeds),
-        )
+        # context.db.search(topic=topic.value, embeddings=list(embeds))
+        db_response = await context.run_io(context.db.search, topic.value, list(embeds))
         for index, resp in zip(indexes, db_response):
             result[index] = resp
     return result
@@ -39,7 +37,7 @@ async def get_embeddings(queries: list[str]) -> list[list[float]]:
         return r.json()
 
 
-async def llm_request(queries: list[str], articles: list[DBSearchResponse]) -> AsyncIterator[str]:
+def build_prompts(queries: list[str], articles: list[DBSearchResponse]) -> list[str]:
     system_prompt = """
         You are a QA system.
         Answer the user's query strictly based on the provided articles, without any introductions or additional comments.
@@ -56,17 +54,17 @@ async def llm_request(queries: list[str], articles: list[DBSearchResponse]) -> A
         rows = [system_prompt, 'Input:', f'<input>{query}</input>']  # suppose our model doesn't support a system prompt
         rows.extend([f'<article>{a.entity.text}</article>' for a in q_articles.items])
         user_prompts.append('\n'.join(rows))
-    return ask_llm(user_prompts)
+    return user_prompts
 
 
-async def ask_llm(prompts: list[str]) -> AsyncIterator[str]:
+async def get_llm_answer(prompts: list[str]) -> AsyncIterator[str]:
     async with httpx.AsyncClient() as client:
         async with client.stream(
-                'POST',
-                LLM_URL,
-                json={'items': prompts},
-                headers={"accept": "text/event-stream", "Content-Type": "application/json"},
-                timeout=10,
+            'POST',
+            LLM_URL,
+            json={'items': prompts},
+            headers={"accept": "text/event-stream", "Content-Type": "application/json"},
+            timeout=10,
         ) as response:
             response: httpx.Response
             if response.status_code != 200:
@@ -77,7 +75,7 @@ async def ask_llm(prompts: list[str]) -> AsyncIterator[str]:
 
 async def ask_action(queries: list[Question], context: Context) -> AsyncIterator[str]:
     str_queries = [q.question for q in queries]
-    embeddings = await get_embeddings(str_queries)
-    articles = await context.run_io(load_articles, queries, embeddings, context)
-
-    return await llm_request(queries=str_queries, articles=articles)
+    embeddings = await get_embeddings(queries=str_queries)
+    articles = await get_articles(queries=queries, embeddings=embeddings, context=context)
+    user_prompts = build_prompts(queries=str_queries, articles=articles)
+    return get_llm_answer(prompts=user_prompts)

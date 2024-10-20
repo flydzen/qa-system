@@ -12,7 +12,7 @@ class Database:
     COLLECTION_NAME = 'articles'
 
     def __init__(self, host=milvus_host, port=milvus_port):
-        self.client = MilvusClient(uri=f'http://{host}:{port}')
+        self.client = MilvusClient(uri=f'http://{host}:{port}', timeout=10)
 
     def search(self, topic, embeddings: list) -> list[DBSearchResponse]:
         res = self.client.search(

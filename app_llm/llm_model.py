@@ -31,11 +31,10 @@ class LLMModel:
                     response.append([])
                     continue
                 article = match.group(1)
-                start = random.randint(0, len(article))
-                stop = random.randint(start, start + 128)
+                start = random.randint(0, max(len(article) - 1, 0))
+                stop = random.randint(start + 1, start + 128)
                 response.append(article[start: stop])
-                # self._cpu_load(stop * 10000)
-                self._cpu_load(100_000)
+                self._cpu_load(10_000_000)
             if not any(response):
                 break
             yield response

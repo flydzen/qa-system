@@ -1,3 +1,4 @@
+import os.path
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -7,6 +8,7 @@ import uvicorn
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.exceptions import HTTPException
 
 from app.context import Context
 from app.data_processing import ask_action
@@ -25,7 +27,7 @@ io_pool: ThreadPoolExecutor
 async def lifespan(_: FastAPI):
     global io_pool
 
-    with ThreadPoolExecutor(max_workers=1) as thread_pool:
+    with ThreadPoolExecutor(max_workers=8) as thread_pool:
         io_pool = thread_pool
         yield
 
@@ -52,8 +54,12 @@ app.add_middleware(
 
 
 def get_root_content():
-    with open('README.md', 'r') as f:
-        return markdown.markdown(f.read())
+    locations = ('README.md', '../README.md', '../../README.md')
+    for loc in locations:
+        if os.path.exists(loc):
+            with open(loc, 'r') as f:
+                return markdown.markdown(f.read())
+    raise HTTPException(404, 'README not found')
 
 
 @app.get("/", response_class=HTMLResponse)

@@ -41,8 +41,3 @@ class DBSearchResponseItem(BaseModel):
 
 class DBSearchResponse(BaseModel):
     items: list[DBSearchResponseItem]
-
-# LLM Api models
-#
-# class LLMEncodeResponse(BaseModel):
-#

@@ -1,13 +1,17 @@
-import json
-import random
-import re
+import os
 from collections import defaultdict
-from typing import Iterator
+from typing import AsyncIterator
 
-import ujson
+import httpx
+from fastapi import HTTPException
 
-from server.context import Context
-from server.models import Question, DBSearchResponse, Topic
+from app.context import Context
+from app.models import Question, DBSearchResponse, Topic
+
+LLM_HOST = os.getenv('LLM_HOST') or 'localhost'
+LLM_PORT = os.getenv('LLM_PORT') or '8080'
+EMBEDDINGS_URL = f'http://{LLM_HOST}:{LLM_PORT}/encode'
+LLM_URL = f'http://{LLM_HOST}:{LLM_PORT}/llm_ask'
 
 
 def load_articles(queries: list[Question], embeddings: list[list], context: Context) -> list[DBSearchResponse]:
@@ -27,7 +31,15 @@ def load_articles(queries: list[Question], embeddings: list[list], context: Cont
     return result
 
 
-def llm_request(queries: list[str], articles: list[DBSearchResponse]) -> Iterator[list[str]]:
+async def get_embeddings(queries: list[str]) -> list[list[float]]:
+    async with httpx.AsyncClient() as client:
+        r = await client.post(EMBEDDINGS_URL, json={'items': queries}, timeout=10)
+        if r.status_code != 200:
+            raise HTTPException(status_code=500, detail='Unsuccessful embedding')
+        return r.json()
+
+
+async def llm_request(queries: list[str], articles: list[DBSearchResponse]) -> AsyncIterator[str]:
     system_prompt = """
         You are a QA system.
         Answer the user's query strictly based on the provided articles, without any introductions or additional comments.
@@ -44,42 +56,28 @@ def llm_request(queries: list[str], articles: list[DBSearchResponse]) -> Iterato
         rows = [system_prompt, 'Input:', f'<input>{query}</input>']  # suppose our model doesn't support a system prompt
         rows.extend([f'<article>{a.entity.text}</article>' for a in q_articles.items])
         user_prompts.append('\n'.join(rows))
-    return llm(user_prompts)
+    return ask_llm(user_prompts)
 
 
-def llm(prompts: list[str]) -> Iterator[list[str]]:
-    # yes, we are parsing the message we just made, but this is done intentionally
-    response = []
-    for prompt in prompts:
-        query = re.compile('<input>(.+)</input>').search(prompt).group(1)
-        response.append(f'Answer for question "{query}" is:')
-    yield response
-    iters = [re.compile('<article>(.+)</article>').finditer(prompt) for prompt in prompts]
-    while True:
-        response = []
-        for iterator in iters:
-            if (match := next(iterator, None)) is None:
-                response.append([])
-                continue
-            article = match.group(1)
-            start = random.randint(0, len(article))
-            stop = random.randint(start, start + 128)
-            response.append(article[start: stop])
-            for i in range(1000000):
-                stop += stop / (stop + 1)
-        if not any(response):
-            break
-        yield response
+async def ask_llm(prompts: list[str]) -> AsyncIterator[str]:
+    async with httpx.AsyncClient() as client:
+        async with client.stream(
+                'POST',
+                LLM_URL,
+                json={'items': prompts},
+                headers={"accept": "text/event-stream", "Content-Type": "application/json"},
+                timeout=10,
+        ) as response:
+            response: httpx.Response
+            if response.status_code != 200:
+                raise HTTPException(status_code=500, detail='Streaming error')
+            async for text in response.aiter_text():
+                yield text
 
 
-async def ask_action(queries: list[Question], context: Context) -> Iterator[str]:
+async def ask_action(queries: list[Question], context: Context) -> AsyncIterator[str]:
     str_queries = [q.question for q in queries]
-    # embeddings = await context.run_cpu(context.embedding_model.encode_queries, str_queries)
-    embeddings = await context.run_io(context.embedding_model.encode_queries, str_queries)
-    # embeddings = context.embedding_model.encode_queries(str_queries)
+    embeddings = await get_embeddings(str_queries)
     articles = await context.run_io(load_articles, queries, embeddings, context)
-    # articles = load_articles(queries, embeddings, context)
-    for i, response in enumerate(llm_request(queries=str_queries, articles=articles)):
-        yield (f'event: qasystem\n'
-               f'id: {i}\n'
-               f'data: {ujson.dumps(response)}\n\n')
+
+    return await llm_request(queries=str_queries, articles=articles)

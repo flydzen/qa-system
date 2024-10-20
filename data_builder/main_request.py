@@ -1,11 +1,8 @@
 import json
+import os
 
 import milvus_model
-import pandas as pd
-from pymilvus import FieldSchema, CollectionSchema, DataType, MilvusClient, exceptions
-import os
-from tqdm import tqdm
-import torch
+from pymilvus import MilvusClient
 
 milvus_host = os.getenv('MILVUS_HOST') or 'localhost'
 milvus_port = os.getenv('MILVUS_PORT') or '19530'
@@ -13,7 +10,6 @@ milvus_port = os.getenv('MILVUS_PORT') or '19530'
 client = MilvusClient(uri=f'http://{milvus_host}:{milvus_port}')
 collection_name = 'articles'
 client.load_collection(collection_name)
-
 
 model = milvus_model.dense.SentenceTransformerEmbeddingFunction(
     model_name='all-MiniLM-L6-v2',

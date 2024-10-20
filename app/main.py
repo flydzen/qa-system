@@ -1,19 +1,17 @@
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-import milvus_model
-from fastapi import FastAPI, Depends
-from fastapi.responses import StreamingResponse, HTMLResponse
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 import markdown
+import uvicorn
+from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, HTMLResponse
 
-from server.context import Context
-from server.data_processing import ask_action
-from server.db import Database
-from server.models import AskRequest
-from milvus_model.base import BaseEmbeddingFunction
+from app.context import Context
+from app.data_processing import ask_action
+from app.db import Database
+from app.models import AskRequest
 
 
 class TextEventStreamResponse(StreamingResponse):
@@ -21,34 +19,22 @@ class TextEventStreamResponse(StreamingResponse):
 
 
 io_pool: ThreadPoolExecutor
-cpu_pool: ProcessPoolExecutor
-model: BaseEmbeddingFunction
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    global io_pool, cpu_pool, model
+    global io_pool
 
-    model = milvus_model.dense.SentenceTransformerEmbeddingFunction(
-        model_name='all-MiniLM-L6-v2',
-        device='cpu',
-        normalize_embeddings=True,
-    )
-    with ThreadPoolExecutor(max_workers=8) as thread_pool, ProcessPoolExecutor(max_workers=1) as process_pool:
+    with ThreadPoolExecutor(max_workers=1) as thread_pool:
         io_pool = thread_pool
-        cpu_pool = process_pool
         yield
 
 
 def get_session() -> Context:
     assert io_pool is not None
-    assert cpu_pool is not None
-
     return Context(
         db=Database(),
         io_pool=io_pool,
-        cpu_pool=cpu_pool,
-        embedding_model=model,
     )
 
 
@@ -77,7 +63,7 @@ async def root():
 
 @app.post("/ask", response_class=TextEventStreamResponse)
 async def ask(query: AskRequest, context: ContextDep) -> StreamingResponse:
-    return StreamingResponse(ask_action(query.questions, context), media_type="text/event-stream")
+    return StreamingResponse(await ask_action(query.questions, context), media_type="text/event-stream")
 
 
 if __name__ == "__main__":

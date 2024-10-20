@@ -1,14 +1,14 @@
-import json
+import os
 
-import milvus_model
+import httpx
 import pandas as pd
 from pymilvus import FieldSchema, CollectionSchema, DataType, MilvusClient, exceptions
-import os
 from tqdm import tqdm
-import torch
 
 milvus_host = os.getenv('MILVUS_HOST') or 'localhost'
 milvus_port = os.getenv('MILVUS_PORT') or '19530'
+llm_host = os.getenv('LLM_HOST') or 'localhost'
+llm_port = os.getenv('LLM_PORT') or '8080'
 
 client = MilvusClient(uri=f'http://{milvus_host}:{milvus_port}')
 
@@ -51,27 +51,25 @@ collection = client.create_collection(
 df = pd.read_csv('Articles.csv', encoding='cp1252')[['Article', 'NewsType']]
 df['Article'] = df['Article'].apply(lambda x: x[:article_max_len].strip())
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(device)
-model = milvus_model.dense.SentenceTransformerEmbeddingFunction(
-    model_name='all-MiniLM-L6-v2',
-    device=device,
-    normalize_embeddings=True,
-)
-
+url = f'http://{llm_host}:{llm_port}/encode'
 embeddings = []
 batch_size = 64
-# embeddings = model.encode_documents(df['Article'].to_list())
-for i in tqdm(list(range(0, len(df), batch_size))):
+for i in tqdm(range(0, len(df), batch_size)):
     batch = df.iloc[i:i + batch_size]
-    batch_embeddings = model.encode_documents(batch['Article'].to_list())
-    embeddings.extend(batch_embeddings)
+    articles = batch['Article'].to_list()
+    response = httpx.post(url, json={'items': articles})
+
+    if response.status_code == 200:
+        embeddings.extend(response.json())
+    else:
+        print(f"Error with status code: {response.status_code}")
 
 insert_df = pd.DataFrame({
     'embedding': embeddings,
     'topic': df['NewsType'].iloc[:len(embeddings)],
     'text': df['Article'].iloc[:len(embeddings)],
 })
+
 data_formatted = insert_df.to_dict('records')
 client.insert(
     collection_name=collection_name,

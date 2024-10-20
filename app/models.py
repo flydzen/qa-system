@@ -9,6 +9,9 @@ class Topic(enum.Enum):
     SPORT = 'sports'
 
 
+# API models
+
+
 class Question(BaseModel):
     question: str
     topic: Topic
@@ -17,6 +20,8 @@ class Question(BaseModel):
 class AskRequest(BaseModel):
     questions: list[Question]
 
+
+# DB models
 
 class DBSearchRequest(BaseModel):
     topic: Topic
@@ -36,3 +41,8 @@ class DBSearchResponseItem(BaseModel):
 
 class DBSearchResponse(BaseModel):
     items: list[DBSearchResponseItem]
+
+# LLM Api models
+#
+# class LLMEncodeResponse(BaseModel):
+#

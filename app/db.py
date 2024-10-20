@@ -2,7 +2,7 @@ import os
 
 from pymilvus import MilvusClient
 
-from server.models import DBSearchRequest, DBSearchResponse
+from app.models import DBSearchResponse
 
 milvus_host = os.getenv('MILVUS_HOST') or 'localhost'
 milvus_port = os.getenv('MILVUS_PORT') or '19530'

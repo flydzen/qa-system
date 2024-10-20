@@ -75,9 +75,10 @@ def llm(prompts: list[str]) -> Iterator[list[str]]:
 async def ask_action(queries: list[Question], context: Context) -> Iterator[str]:
     str_queries = [q.question for q in queries]
     # embeddings = await context.run_cpu(context.embedding_model.encode_queries, str_queries)
-    embeddings = context.embedding_model.encode_queries(str_queries)
-    # articles = await context.run_io(load_articles, queries, embeddings, context)
-    articles = load_articles(queries, embeddings, context)
+    embeddings = await context.run_io(context.embedding_model.encode_queries, str_queries)
+    # embeddings = context.embedding_model.encode_queries(str_queries)
+    articles = await context.run_io(load_articles, queries, embeddings, context)
+    # articles = load_articles(queries, embeddings, context)
     for i, response in enumerate(llm_request(queries=str_queries, articles=articles)):
         yield (f'event: qasystem\n'
                f'id: {i}\n'

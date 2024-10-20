@@ -34,7 +34,7 @@ async def lifespan(_: FastAPI):
         device='cpu',
         normalize_embeddings=True,
     )
-    with ThreadPoolExecutor(max_workers=1) as thread_pool, ProcessPoolExecutor(max_workers=1) as process_pool:
+    with ThreadPoolExecutor(max_workers=8) as thread_pool, ProcessPoolExecutor(max_workers=1) as process_pool:
         io_pool = thread_pool
         cpu_pool = process_pool
         yield

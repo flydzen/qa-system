@@ -2,7 +2,31 @@
 
 [Русский](./README.ru.md) | [English](./README.md)
 
+Система ответов на вопросы с учетом контекста знаний
+
+## Оглавление
+
+- [Оглавление](#оглавление)
+- [Архитектура](#архитектура)
+  - [fastapi_app](#fastapi_app)
+  - [fastapi_app_llm](#fastapi_app_llm)
+  - [setup_milvus](#setup_milvus)
+  - [milvus-standalone](#milvus-standalone)
+  - [prometheus, loki, grafana](#prometheus-loki-grafana)
+- [Инструкция по запуску](#инструкция-по-запуску)
+  - [Приложение](#приложение)
+  - [Тестирование](#тестирование)
+  - [Нагрузочное тестирование](#нагрузочное-тестирование)
+
 ## Архитектура:
+
+Основное приложение разбито на два, это позволило улучшить:
+- **Разработку**. Уменьшается сложность приложения и управления ресурсами: не нужно балансировать между cpu и io задачами, которые требуют разные подходы к вычислению.
+- **Масштабирование**. Можно выделить нод и воркеров именно в той части, где их не хватает
+
+Все вместе поставляется через docker-compose. 
+
+При масшабировании также необходимо разделить вспомогательные инструменты (db, metrics, logs) по отдельным машинам.
 
 ![architecture](./imgs/miro.png)
 
@@ -23,7 +47,7 @@
 При работе с базой данных используется ThreadPoolExecutor на несколько потоков.
 На данный момент при каждом вызове ручки открывается новое синхронное подключение к базе, но в перспективе вместо открытия будет браться подключение из пулла коннекшенов.
 
-### fastapi_app_llm 
+### fastapi_app_llm
 
 Вспомогательное приложение. Является синхронным и cpu-нагруженным.
 Выполняет вычисления на моделях (настоящей и моке). Модель работает на cpu, а не gpu для упрощения
@@ -55,10 +79,10 @@
 
 ### prometheus, loki, grafana
 
-- prometheus служит для сбора метрик. Сами метрики создаются пакетом `prometheus-fastapi-instrumentator` поверх fastapi приложения,
+- **prometheus** служит для сбора метрик. Сами метрики создаются пакетом `prometheus-fastapi-instrumentator` поверх fastapi приложения,
 но при необходимости можно добавить свои (например загрузку cpu контейнера)
-- loki служит единой точкой сбора логов из всех приложений
-- grafana служит для отображения метрик и логов.
+- **loki** служит единой точкой сбора логов из всех приложений
+- **grafana** служит для отображения метрик и логов.
 
 Пример экрана мониторинга
 
@@ -69,10 +93,10 @@
 ### Приложение
 
 1. 
-   - Option 1: run `docker compose up setup --build` to create and fill database
-   - Option 2: [download](https://drive.google.com/file/d/1zPxLk0wFRi03VD5L0TNZUzJ0XlWHR4cM/view?usp=sharing) db volume and extract it to [./volumes/](./volumes) directory
-2. run `docker compose up grafana --build -d` to run grafana 
-3. run `docker compose up app --build` to run main application
+   - Вариант 1: выполните `docker compose up setup --build` чтобы инициировать и заполнить базу данных
+   - Вариант 2: [скачайте](https://drive.google.com/file/d/1zPxLk0wFRi03VD5L0TNZUzJ0XlWHR4cM/view?usp=sharing) данные базы и распакуйте архив в [./volumes/](./volumes) папку
+2. Выполните `docker compose up grafana --build -d` для запуска grafana
+3. Выполните `docker compose up app --build` для запуска основного приложения
 
 - Приложение (swagger) будет доступно по адресу http://127.0.0.1:8000/docs
 - Приложение (swagger) с моделями: http://127.0.0.1:8080/docs

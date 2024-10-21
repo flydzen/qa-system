@@ -2,7 +2,32 @@
 
 [Русский](./README.ru.md) | [English](./README.md)
 
+Question answering system with grounding
+
+## Table of Contents
+
+- [Table of Contents](#table-of-contents)
+- [Architecture](#architecture)
+  - [fastapi_app](#fastapi_app)
+  - [fastapi_app_llm](#fastapi_app_llm)
+  - [setup_milvus](#setup_milvus)
+  - [milvus-standalone](#milvus-standalone)
+  - [prometheus, loki, grafana](#prometheus-loki-grafana)
+- [Launch Instructions](#launch-instructions)
+  - [Application](#application)
+  - [Testing](#testing)
+  - [Load Testing](#load-testing)
+
 ## Architecture:
+
+The core application is divided into two parts, which improves:
+
+- **Development**: It reduces the complexity of the application and resource management, eliminating the need to balance between CPU-bound and IO-bound tasks, which require different approaches to computation.
+- **Scalability**: You can allocate nodes and workers specifically to the part of the application that needs more resources.
+
+Everything is delivered via Docker Compose.
+
+When scaling, it's also necessary to separate auxiliary tools (db, metrics, logs) into dedicated machines.
 
 ![architecture](./imgs/miro.png)
 
@@ -54,9 +79,9 @@ In the [setup_milvus](#setup_milvus) section, a partition is created by the key 
 
 ### prometheus, loki, grafana
 
-- Prometheus is used for collecting metrics. The metrics themselves are created using the `prometheus-fastapi-instrumentator` package on top of the FastAPI application, but custom metrics can be added if necessary (for example, CPU load of the container).
-- Loki serves as a single point for collecting logs from all applications.
-- Grafana is used for displaying metrics and logs.
+- **Prometheus** is used for collecting metrics. The metrics themselves are created using the `prometheus-fastapi-instrumentator` package on top of the FastAPI application, but custom metrics can be added if necessary (for example, CPU load of the container).
+- **Loki** serves as a single point for collecting logs from all applications.
+- **Grafana** is used for displaying metrics and logs.
 
 Example monitoring screen:
 

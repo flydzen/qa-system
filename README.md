@@ -1,97 +1,97 @@
 # LLM QA System
 
-## Архитектура:
+[Русский](./README.ru.md) | [English](./README.md)
+
+## Architecture:
 
 ![architecture](./imgs/miro.png)
 
-Логические узлы выделены в докер контейнеры, вот их описание
+Logical nodes are Docker containers, here is their description.
 
 ### fastapi_app
 
-Основное приложение, является точкой входа. 
+The main application, serves as the entry point.
 
-- Ручка `GET /` отдает этот документ в html
-- Ручка `POST /ask` отвечает на заданный вопрос, дополняя материалами.
+- `GET /` - returns this document in HTML format.
+- `POST /ask` - answers the given question by supplementing it with materials.
 
-Приложение асинхронное и не имеет cpu-нагруженных частей, все ожидание является io-bound, их 3:
-- Запрос `POST /encode`
-- Поиск в базе
-- Запрос `POST /llm_ask`
+The application is asynchronous and does not have CPU bound parts; all waiting is I/O bound, and there are three:
+- `POST /encode` request
+- Database search
+- `POST /llm_ask` request
 
-При работе с базой данных используется ThreadPoolExecutor на несколько потоков.
-На данный момент при каждом вызове ручки открывается новое синхронное подключение к базе, но в перспективе вместо открытия будет браться подключение из пулла коннекшенов.
+A ThreadPoolExecutor is used for database operations with multiple threads.
+Currently, a new synchronous connection to the database is opened with each endpoint call, but in the future, a connection could be taken from the connection pool instead of opening a new one.
 
-### fastapi_app_llm 
+### fastapi_app_llm
 
-Вспомогательное приложение. Является синхронным и cpu-нагруженным.
-Выполняет вычисления на моделях (настоящей и моке). Модель работает на cpu, а не gpu для упрощения
+A supporting application. It is synchronous and CPU bound.
+Performs calculations on models (real and mocked). The model executes on the CPU rather than the GPU for simplicity.
 
-- Ручка `GET /llm_ask` отдает стрим с ответами на prompt от мока llm
-- Ручка `POST /encode` использует SentenceTransformer ([модель](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)) для кодирования входящего сообщения и отдает вектор. 
+- `GET /llm_ask` returns a stream with answers to the prompt from the mock LLM.
+- `POST /encode` uses SentenceTransformer ([model](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)) to encode the incoming message and returns a vector.
 
-Обе ручки принимают батч запросов.
+Both endpoints accept batch requests.
 
 ### setup_milvus
 
-Одноразовый контейнер, который загрузит данные из [датасета](https://www.kaggle.com/datasets/asad1m9a9h6mood/news-articles/data) в базу данных
+A one-time container that loads data from the [dataset](https://www.kaggle.com/datasets/asad1m9a9h6mood/news-articles/data) into the database.
 
-Логически имеет 3 части:
-1) Прочитать датасет из файла
-2) Собрать энкодинги для строк из датасета
-3) Загрузить в БД данные с их энкодингами
+Logically, it has three parts:
+1) Read the dataset from a file
+2) Generate encodings for the strings from the dataset
+3) Upload the data with their encodings to the database
 
 ### milvus-standalone
 
-Векторная база данных, специализирующаяся на быстром поиске при больших объемах данных.
+A vector database specializing in fast searches with large data volumes.
 
-В этом приложении использован standalone способ деплоя, так как это является достаточно простым способом и подходит под требования, 
-так как, согласно документации, standalone применяется для случаев хранения до 100 миллионов векторов.
+This application uses the "standalone" deployment method, as it is a simple approach that meets the requirements. According to the documentation, standalone is applied for cases storing up to 100 million vectors.
 
-В дальнейшем, при масштабировании можно будет перейти на распределенную систему, не меняя при этом логику приложения.
+In the future, when scaling up, it could be possible to switch to a distributed system without changing the application's logic.
 
-Также стоит отметить, что в секции [setup_milvus](#setup_milvus) создается партиция по ключу `topic`, что позволит в разы ускорить поиск.
+In the [setup_milvus](#setup_milvus) section, a partition is created by the key `topic`, which will significantly speed up searches.
 
 ### prometheus, loki, grafana
 
-- prometheus служит для сбора метрик. Сами метрики создаются пакетом `prometheus-fastapi-instrumentator` поверх fastapi приложения,
-но при необходимости можно добавить свои
-- loki служит единой точкой сбора логов из всех приложений
-- grafana служит для отображения метрик и логов.
+- Prometheus is used for collecting metrics. The metrics themselves are created using the `prometheus-fastapi-instrumentator` package on top of the FastAPI application, but custom metrics can be added if necessary (for example, CPU load of the container).
+- Loki serves as a single point for collecting logs from all applications.
+- Grafana is used for displaying metrics and logs.
 
-Пример экрана мониторинга
+Example monitoring screen:
 
 ![grafana](imgs/screenshot_grafana.png)
 
-## Инструкция по запуску
+## Launch Instructions
 
-### Приложение
+### Application
 
 1. 
-   - Option 1: run `docker compose up setup --build` to create and fill database
-   - Option 2: [download](https://drive.google.com/file/d/1zPxLk0wFRi03VD5L0TNZUzJ0XlWHR4cM/view?usp=sharing) db volume and extract it to [./volumes/](https://github.com/flydzen/qa-system/tree/main/volumes) directory
-2. run `docker compose up grafana --build -d` to run grafana 
-3. run `docker compose up app --build` to run main application
+   - Option 1: run `docker compose up setup --build` to create and fill the database.
+   - Option 2: [download](https://drive.google.com/file/d/1zPxLk0wFRi03VD5L0TNZUzJ0XlWHR4cM/view?usp=sharing) the DB volume and extract it to the [./volumes/](./volumes) directory.
+2. run `docker compose up grafana --build -d` to run Grafana.
+3. run `docker compose up app --build` to run the main application.
 
-Приложение будет доступно по адресу http://127.0.0.1:8000. 
-Swagger по http://127.0.0.1:8000/docs
+- The application (swagger) will be available at http://127.0.0.1:8000/docs
+- The application (swagger) with LLM: http://127.0.0.1:8080/docs
+- Monitoring: http://127.0.0.1:3000
+- prometheus: http://127.0.0.1:9090
 
-Мониторинги доступны по http://127.0.0.1:3000
+### Testing
 
-### Тестирование
+There are tests for `app_llm`, which are independent and can be run at any time.
 
-Есть тесты для `app_llm`, они независимы и их можно запустить в любой момент
+For `app`, only integration tests are ready; they can only be run after executing the command
+`docker compose up app_llm --build`.
 
-Для `app` написаны только интеграционные тесты, их можно запустить только после выполнения команды
-`docker compose up app_llm --build` 
+Tests are run with the command `pytest` from the module directory.
 
-тесты запускаются командой `pytest` из директории модуля.
+### Load testing
 
-### Нагрузочное тестирование
-
-Также можно запустить нагрузочное тестирование. Для этого запустите приложение и выполните команду
+Load testing can also be performed. To do this, start the application and run the command:
 
 ```commandline
 locust -f ./locust_testing/locustfile.py
 ```
 
-После чего укажите host: `http://127.0.0.1:8000` и другие параметры в интерфейсе
+Then specify the host: `http://127.0.0.1:8000` and other parameters in the [interface](http://localhost:8089)

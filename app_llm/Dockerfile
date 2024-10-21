@@ -6,6 +6,7 @@ COPY app_llm/requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY common common
 COPY app_llm app_llm
 
 EXPOSE 8000

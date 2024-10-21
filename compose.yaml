@@ -23,7 +23,29 @@ services:
       retries: 3
       start_period: 90s
     command: ["milvus", "run", "standalone"]
-
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - ./volumes/grafana:/var/lib/grafana
+    depends_on:
+     - loki
   app_llm:
     build:
       context: .
@@ -31,6 +53,11 @@ services:
     container_name: fastapi_app_llm
     ports:
       - "8080:8000"
+    environment:
+      - LOKI_ENDPOINT=http://loki:3100/loki/api/v1/push
+    depends_on:
+      - prometheus
+      - loki
     restart: always
 
   setup:
@@ -40,7 +67,7 @@ services:
     container_name: setup_milvus
     environment:
       - MILVUS_HOST=milvus
-      - LLM_HOST=app_llm
+      - LLM_HOST=fastapi_app_llm
       - LLM_PORT=8000
     depends_on:
       - milvus
@@ -56,9 +83,12 @@ services:
       - "8000:8000"
     environment:
       - MILVUS_HOST=milvus
-      - LLM_HOST=app_llm
+      - LLM_HOST=fastapi_app_llm
       - LLM_PORT=8000
+      - LOKI_ENDPOINT=http://loki:3100/loki/api/v1/push
     depends_on:
       - milvus
       - app_llm
+      - prometheus
+      - loki
     restart: always

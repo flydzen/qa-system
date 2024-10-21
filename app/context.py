@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import TypeVar, Callable, Any
@@ -12,6 +13,7 @@ T = TypeVar('T')
 class Context:
     db: Database
     io_pool: Executor
+    logger: logging.Logger
 
     async def run_io(self, task: Callable[..., T], *args: Any) -> T:
         loop = asyncio.get_event_loop()

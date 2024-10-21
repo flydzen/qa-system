@@ -1,6 +1,9 @@
+import logging
 import os.path
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from os import getenv
+from queue import Queue
 from typing import Annotated
 
 import markdown
@@ -9,7 +12,10 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.exceptions import HTTPException
+from logging_loki import LokiQueueHandler
+from prometheus_fastapi_instrumentator import Instrumentator
 
+from common import setup_logging
 from app.context import Context
 from app.data_processing import ask_action
 from app.db import Database
@@ -21,12 +27,14 @@ class TextEventStreamResponse(StreamingResponse):
 
 
 io_pool: ThreadPoolExecutor
+logger: logging.Logger
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    global io_pool
+    global io_pool, logger
 
+    logger = setup_logging('app')
     with ThreadPoolExecutor(max_workers=8) as thread_pool:
         io_pool = thread_pool
         yield
@@ -37,12 +45,25 @@ def get_session() -> Context:
     return Context(
         db=Database(),
         io_pool=io_pool,
+        logger=logger,
     )
 
 
 ContextDep = Annotated[Context, Depends(get_session)]
 
 app = FastAPI(lifespan=lifespan)
+
+loki_logs_handler = LokiQueueHandler(
+    Queue(-1),
+    url=getenv('LOKI_ENDPOINT') or 'http://127.0.0.1:3100/loki/api/v1/push',
+    tags={"application": "fastapi_app"},
+    version="1",
+)
+uvicorn_access_logger = logging.getLogger("uvicorn.access")
+uvicorn_access_logger.addHandler(loki_logs_handler)
+
+
+instrumentator = Instrumentator().instrument(app).expose(app)
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ from app_llm.llm_model import LLMModel
 class Context:
     embedding_model: SentenceTransformer
     llm_model: LLMModel
+    logger: logging.Logger
 
 
 class LLMRequest(BaseModel):

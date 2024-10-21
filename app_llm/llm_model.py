@@ -7,7 +7,8 @@ class LLMModel:
     def __init__(self, seed):
         random.seed(seed)
 
-    def _cpu_load(self, n) -> None:
+    @staticmethod
+    def _cpu_load(n) -> None:
         t = 1
         for i in range(n):
             t += t / (t + 1)
@@ -34,7 +35,7 @@ class LLMModel:
                 start = random.randint(0, max(len(article) - 1, 0))
                 stop = random.randint(start + 1, start + 128)
                 response.append(article[start: stop])
-                self._cpu_load(10_000_000)
+                self._cpu_load(1_000_000)
             if not any(response):
                 break
             yield response

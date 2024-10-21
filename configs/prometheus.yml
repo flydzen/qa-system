@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 5s
+  scrape_timeout: 5s
+  evaluation_interval: 1m
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
+  - job_name: 'fastapi_app'
+    static_configs:
+      - targets: ['fastapi_app:8000']
+  - job_name: 'fastapi_app_llm'
+    static_configs:
+      - targets: ['fastapi_app_llm:8000']
+

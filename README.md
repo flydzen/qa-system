@@ -66,7 +66,9 @@
 
 ### Приложение
 
-1. run `docker compose up setup --build` to create and fill database
+1. 
+   - Option 1: run `docker compose up setup --build` to create and fill database
+   - Option 2: [download](https://drive.google.com/file/d/1zPxLk0wFRi03VD5L0TNZUzJ0XlWHR4cM/view?usp=sharing) db volume and extract it to [./volumes/](https://github.com/flydzen/qa-system/tree/main/volumes) directory
 2. run `docker compose up grafana --build -d` to run grafana 
 3. run `docker compose up app --build` to run main application
 

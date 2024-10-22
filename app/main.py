@@ -53,16 +53,6 @@ ContextDep = Annotated[Context, Depends(get_session)]
 
 app = FastAPI(lifespan=lifespan)
 
-loki_logs_handler = LokiQueueHandler(
-    Queue(-1),
-    url=getenv('LOKI_ENDPOINT') or 'http://127.0.0.1:3100/loki/api/v1/push',
-    tags={"application": "fastapi_app"},
-    version="1",
-)
-uvicorn_access_logger = logging.getLogger("uvicorn.access")
-uvicorn_access_logger.addHandler(loki_logs_handler)
-
-
 instrumentator = Instrumentator().instrument(app).expose(app)
 
 app.add_middleware(
@@ -74,18 +64,9 @@ app.add_middleware(
 )
 
 
-def get_root_content():
-    locations = ('README.md', '../README.md', '../../README.md')
-    for loc in locations:
-        if os.path.exists(loc):
-            with open(loc, 'r') as f:
-                return markdown.markdown(f.read())
-    raise HTTPException(404, 'README not found')
-
-
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    return HTMLResponse(get_root_content())
+    return HTMLResponse('<h1>QA System with AI grounding</h1>')
 
 
 @app.post("/ask", response_class=TextEventStreamResponse)

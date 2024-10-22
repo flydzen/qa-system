@@ -37,7 +37,7 @@ Logical nodes are Docker containers, here is their description.
 
 The main application, serves as the entry point.
 
-- `GET /` - returns this document in HTML format.
+- `GET /` - returns simple title.
 - `POST /ask` - answers the given question by supplementing it with materials.
 
 The application is asynchronous and does not have CPU bound parts; all waiting is I/O bound, and there are three:
@@ -50,13 +50,15 @@ Currently, a new synchronous connection to the database is opened with each endp
 
 ### fastapi_app_llm
 
-A supporting application. It is synchronous and CPU bound.
-Performs calculations on models (real and mocked). The model executes on the CPU rather than the GPU for simplicity.
+A supporting application. It is synchronous and CPU/GPU bound.
+Performs calculations on models (real and mocked).
 
-- `GET /llm_ask` returns a stream with answers to the prompt from the mock LLM.
+- `GET /llm_ask` respond with Server-Sent-Events with answers to the prompt from the mock LLM. 
+    
+    Mock algorithm returns random substrings from the query context. The number of response events is equal to the number of articles.
 - `POST /encode` uses SentenceTransformer ([model](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)) to encode the incoming message and returns a vector.
 
-Both endpoints accept batch requests.
+Both endpoints accept batch requests. 
 
 ### setup_milvus
 
@@ -67,7 +69,7 @@ Logically, it has three parts:
 2) Generate encodings for the strings from the dataset
 3) Upload the data with their encodings to the database
 
-### milvus-standalone
+### milvus_sstandalone
 
 A vector database specializing in fast searches with large data volumes.
 
@@ -91,15 +93,17 @@ Example monitoring screen:
 
 ### Application
 
+Run commands from the root of the project
+
 1. 
    - Option 1: run `docker compose up setup --build` to create and fill the database.
-   - Option 2: [download](https://drive.google.com/file/d/1zPxLk0wFRi03VD5L0TNZUzJ0XlWHR4cM/view?usp=sharing) the DB volume and extract it to the [./volumes/](./volumes) directory.
+   - Option 2: Extract the DB volume [milvus.zip](./volumes/milvus.zip) to the [./volumes/](./volumes) directory.
 2. run `docker compose up grafana --build -d` to run Grafana.
 3. run `docker compose up app --build` to run the main application.
 
 - The application (swagger) will be available at http://127.0.0.1:8000/docs
 - The application (swagger) with LLM: http://127.0.0.1:8080/docs
-- Monitoring: http://127.0.0.1:3000
+- Monitoring: http://127.0.0.1:3000. login: `admin`, pwd: `admin`
 - prometheus: http://127.0.0.1:9090
 
 ### Testing

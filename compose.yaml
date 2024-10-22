@@ -1,7 +1,7 @@
 services:
   milvus:
     image: milvusdb/milvus:v2.4.13
-    container_name: milvus-standalone
+    container_name: milvus_standalone
     security_opt:
       - seccomp:unconfined
     environment:
@@ -23,6 +23,7 @@ services:
       retries: 3
       start_period: 90s
     command: ["milvus", "run", "standalone"]
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -32,11 +33,13 @@ services:
       - "9090:9090"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+
   loki:
     image: grafana/loki:latest
     container_name: loki
     ports:
       - "3100:3100"
+
   grafana:
     image: grafana/grafana
     container_name: grafana
@@ -46,6 +49,23 @@ services:
       - ./volumes/grafana:/var/lib/grafana
     depends_on:
      - loki
+     - prometheus
+
+  setup:
+    build:
+      context: .
+      dockerfile: data_builder/Dockerfile
+    container_name: setup_milvus
+    environment:
+      - MILVUS_HOST=milvus_standalone
+      - MILVUS_PORT=19530
+      - LLM_HOST=fastapi_app_llm
+      - LLM_PORT=8000
+    depends_on:
+      - milvus
+      - app_llm
+    restart: on-failure
+
   app_llm:
     build:
       context: .
@@ -60,20 +80,6 @@ services:
       - loki
     restart: always
 
-  setup:
-    build:
-      context: .
-      dockerfile: data_builder/Dockerfile
-    container_name: setup_milvus
-    environment:
-      - MILVUS_HOST=milvus
-      - LLM_HOST=fastapi_app_llm
-      - LLM_PORT=8000
-    depends_on:
-      - milvus
-      - app_llm
-    restart: no
-
   app:
     build:
       context: .
@@ -82,7 +88,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - MILVUS_HOST=milvus
+      - MILVUS_HOST=milvus_standalone
+      - MILVUS_PORT=19530
       - LLM_HOST=fastapi_app_llm
       - LLM_PORT=8000
       - LOKI_ENDPOINT=http://loki:3100/loki/api/v1/push

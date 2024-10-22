@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from fastapi.testclient import TestClient
 from sentence_transformers import SentenceTransformer
@@ -17,6 +19,7 @@ def setup_app():
         device='cpu',
     )
     app_llm.main.llm_model = LLMModel(seed=14)
+    app_llm.main.logger = logging.getLogger('test')
 
 
 class TestEncode:

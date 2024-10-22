@@ -106,9 +106,9 @@ Example monitoring screen:
 
 > **_NOTE:_**  To see SSE in swagger, open the network tab in the browser
 
-### Application
-
 Run commands from the root of the project
+
+### Application
 
 1.
     - Option 1: run `docker compose up setup --build` to create and fill the database.
@@ -130,7 +130,10 @@ There are tests for `app_llm`, which are independent and can be run at any time.
 For `app`, only integration tests are ready; they can only be run after executing the command
 `docker compose up app_llm --build`.
 
-Tests are run with the command `pytest` from the module directory.
+To run the tests, run:
+
+* `pytest ./app_llm/tests`
+* `pytest ./app/tests`
 
 ### Load testing
 

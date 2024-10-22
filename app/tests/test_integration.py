@@ -1,4 +1,5 @@
 import json
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Iterator
@@ -16,6 +17,7 @@ client = TestClient(fastapi_app)
 @pytest.fixture(scope='session', autouse=True)
 def setup_app():
     # lifespan doesn't work with TestClient
+    app.main.logger = logging.getLogger('test')
     with ThreadPoolExecutor(max_workers=1) as thread_pool:
         app.main.io_pool = thread_pool
         yield

@@ -9,8 +9,8 @@ scrape_configs:
           - localhost:9090
   - job_name: 'fastapi_app'
     static_configs:
-      - targets: ['fastapi_app:8000']
+      - targets: [ 'fastapi_app:8000' ]
   - job_name: 'fastapi_app_llm'
     static_configs:
-      - targets: ['fastapi_app_llm:8000']
+      - targets: [ 'fastapi_app_llm:8000' ]
 

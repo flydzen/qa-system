@@ -1,14 +1,11 @@
 import json
-import re
-import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from json import JSONDecodeError
-from typing import Iterator, AsyncIterator
+from typing import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from httpx import AsyncClient, ASGITransport, Response
+from httpx import AsyncClient, ASGITransport
 
 import app.main
 from app.main import app as fastapi_app

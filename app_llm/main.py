@@ -1,7 +1,5 @@
 import logging
 from contextlib import asynccontextmanager
-from os import getenv
-from queue import Queue
 from typing import Annotated
 
 import ujson
@@ -9,7 +7,6 @@ import uvicorn
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from logging_loki import LokiQueueHandler
 from prometheus_fastapi_instrumentator import Instrumentator
 from sentence_transformers import SentenceTransformer
 

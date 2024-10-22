@@ -1,25 +1,19 @@
 import logging
-import os.path
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from os import getenv
-from queue import Queue
 from typing import Annotated
 
-import markdown
 import uvicorn
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, HTMLResponse
-from fastapi.exceptions import HTTPException
-from logging_loki import LokiQueueHandler
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from common import setup_logging
 from app.context import Context
 from app.data_processing import ask_action
 from app.db import Database
 from app.models import AskRequest
+from common import setup_logging
 
 
 class TextEventStreamResponse(StreamingResponse):

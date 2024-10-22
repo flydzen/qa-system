@@ -78,11 +78,11 @@ class TestLLM:
             'event: qasystem\n'
             'id: 0\n'
             'data: ["Answer for question \\"input\\" is:"]\n\n'
-            
+
             'event: qasystem\n'
             'id: 1\n'
             'data: ["a"]\n\n'
-    
+
             'event: qasystem\n'
             'id: 2\n'
             'data: ["b"]\n\n'

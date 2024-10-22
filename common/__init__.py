@@ -1,6 +1,6 @@
 import logging
-from queue import Queue
 from os import getenv
+from queue import Queue
 
 from logging_loki import LokiQueueHandler
 

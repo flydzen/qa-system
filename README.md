@@ -104,6 +104,8 @@ Example monitoring screen:
 
 ## Launch Instructions
 
+> **_NOTE:_**  To see SSE in swagger, open the network tab in the browser
+
 ### Application
 
 Run commands from the root of the project
@@ -118,6 +120,8 @@ Run commands from the root of the project
 - The application (swagger) with LLM: http://127.0.0.1:8080/docs
 - Monitoring: http://127.0.0.1:3000. login: `admin`, pwd: `admin`
 - prometheus: http://127.0.0.1:9090
+
+Alternatively, you can run everything at once `docker compose up --build`
 
 ### Testing
 
